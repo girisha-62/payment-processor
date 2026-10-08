@@ -1,0 +1,32 @@
+# Runs the payment processor next to a PostgreSQL instance.
+# NOTE: the C++ code in this prototype does NOT talk to Postgres yet -- it
+# uses an in-memory AccountService. `db` is here so you can start wiring up
+# real persistence immediately (see README "Extend: real persistence").
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: payments
+      POSTGRES_USER: payments_app
+      POSTGRES_PASSWORD: change_me_locally
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+      - pgdata:/var/lib/postgresql/data
+
+  payment_processor:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://payments_app:change_me_locally@db:5432/payments
+    command: ["4", "6", "20"]
+
+volumes:
+  pgdata:
